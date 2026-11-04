@@ -27,7 +27,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from middleware.rate_limit import RateLimitMiddleware
 from middleware.request_context import RequestContextMiddleware
-from routes import health, telemetry
+from routes import health, inspections, telemetry
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 configure_logging()
@@ -64,6 +64,7 @@ app.add_exception_handler(Exception, unhandled_error_handler)
 app.include_router(health.router)
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(telemetry.router, prefix="/api/v1")
+app.include_router(inspections.router, prefix="/api/v1")
 
 
 @app.get("/", include_in_schema=False)
