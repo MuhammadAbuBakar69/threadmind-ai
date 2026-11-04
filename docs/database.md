@@ -107,4 +107,4 @@ model version that produced it. `artifact_uri` must never appear in an API respo
 ### Known gaps
 
 `created_at`/`updated_at` are missing on several tables, and `audit_logs` exists with no writer.
-Both are tracked in #15 / #14 — see `docs/issue-traceability.md`.
+Both are tracked in #16 / #14 — see `docs/issue-traceability.md`.

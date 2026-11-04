@@ -22,7 +22,7 @@ command or a test, not an opinion.
 | Bearer authentication + RBAC | `core/auth.py`, `deps.py` | 401/403 paths tested |
 | Error contract without disclosure | `core/errors.py` | 500 body contains no internals |
 | Request correlation + structured logs | `middleware/request_context.py` | header asserted |
-| Rate limiting | `middleware/rate_limit.py` | implemented; distributed form deferred (#15) |
+| Rate limiting | `middleware/rate_limit.py` | implemented; distributed form deferred (#16) |
 | Telemetry contract + ingest | `industrial/telemetry.py`, `routes/telemetry.py` | contract tests green |
 | Tenant isolation proof | `tests/integration/test_tenant_isolation.py` | 9 tests green in CI |
 | Migration rollback | `database/migrations/900_rollback_002.sql` | applied in CI, policies removed |
@@ -34,15 +34,15 @@ command or a test, not an opinion.
 ## Phase 2 — P1 foundation (next)
 
 1. **Identity provider** (SEC-002). Blocks real accounts. Requires a product decision.
-2. **Distributed rate limiting + audit writes** (#14/#15): Redis counters, `audit_logs` written on
+2. **Distributed rate limiting + audit writes** (#14/#16): Redis counters, `audit_logs` written on
    privileged actions and denied access.
 3. **MQTT consumer** using `industrial.telemetry` unchanged. The contract already exists; the
    consumer must not introduce a second one.
-4. **Timestamps on all tables** (#15): `created_at`/`updated_at` where missing, and a trigger to keep
+4. **Timestamps on all tables** (#16): `created_at`/`updated_at` where missing, and a trigger to keep
    `updated_at` honest.
-5. **Async correctness decision** (#15): either forbid `async def` in routes by lint rule, or move to
+5. **Async correctness decision** (#16): either forbid `async def` in routes by lint rule, or move to
    async SQLAlchemy. Choosing is the work; drifting is the risk.
-6. **Schema-driven RLS assertion** (#15): derive the table list from `information_schema` so a new
+6. **Schema-driven RLS assertion** (#16): derive the table list from `information_schema` so a new
    table without a policy fails CI by default.
 
 **Exit condition:** a new table added without a policy fails CI without anyone editing a list.
@@ -82,7 +82,7 @@ and read an investigation without a developer present.
 
 ---
 
-## Phase 6 — Operations (#8, #18)
+## Phase 6 — Operations (#8, #19)
 
 Metrics endpoint, tracing, dashboards, backup/restore rehearsal, load test, SBOM and image signing,
 dependency scanning. Runbook already drafted in `docs/operations-runbook.md`.

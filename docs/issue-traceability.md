@@ -96,10 +96,12 @@ policy.
 
 | # | Title | Priority | Why it exists |
 |---|---|---|---|
-| #15 | Foundation hardening: timestamps, audit writes, async decision, distributed limits | P1 | Six P1 findings share one root cause: defaults not enforced by the schema |
-| #16 | Agent execution reliability: idempotency, retries, timeouts, approval state machine | P2 | AGT-002; retries could duplicate maintenance recommendations today |
-| #17 | Research reproducibility tooling: manifests, experiment runner, leakage splitters, fuzzing | P2 | REAL-01..03; a result cannot currently cite a dataset version |
-| #18 | Observability and supply chain: metrics, tracing, SBOM, signing, dependency scanning | P3 | DEV-001/003; nothing measures the system in operation |
+| #16 | Foundation hardening: timestamps, audit writes, async decision, distributed limits | P1 | Six P1 findings share one root cause: defaults not enforced by the schema |
+| #17 | Agent execution reliability: idempotency, retries, timeouts, approval state machine | P2 | AGT-002; retries could duplicate maintenance recommendations today |
+| #18 | Research reproducibility tooling: manifests, experiment runner, leakage splitters, fuzzing | P2 | REAL-01..03; a result cannot currently cite a dataset version |
+| #19 | Observability and supply chain: metrics, tracing, SBOM, signing, dependency scanning | P3 | DEV-001/003; nothing measures the system in operation |
+
+Implementation for #14 and #16 is on pull request #15 (`foundation/p0-p1-hardening`).
 
 ---
 
@@ -111,7 +113,7 @@ policy.
 | In progress | 2 | #7, #14 |
 | Partial | 3 | #1, #2, #12 |
 | Not started | 9 | #3, #4, #5, #6, #8, #9, #10, #11, #13 |
-| New, unstarted | 4 | #15, #16, #17, #18 |
+| New, unstarted | 4 | #16, #17, #18, #19 |
 
 No issue is closed by this work. #14 is materially advanced but keeps its acceptance criteria open
 until the audit-log and HTTP-layer legs exist, because closing it early would assert a guarantee the

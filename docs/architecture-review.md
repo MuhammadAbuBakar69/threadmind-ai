@@ -75,7 +75,7 @@ hold: an HTTP request never awaits model inference. See §4.
 SQLAlchemy sessions are synchronous. Routes are declared `def`, so Starlette runs them in a
 threadpool and this is correct *today*. It becomes a production hazard the first time someone writes
 `async def` on a route that touches the DB: one slow query then blocks the event loop for every
-tenant. Two options are open (#15): keep sync and add a lint rule forbidding `async def` in
+tenant. Two options are open (#16): keep sync and add a lint rule forbidding `async def` in
 `routes/`, or migrate to async SQLAlchemy. Do not leave it undecided.
 
 ### 2.6 Readiness coupled to dependency construction
@@ -124,7 +124,7 @@ Three deltas from the current design, each earning its complexity:
 2. **Inference workers as separate deployments with their own resource limits.** A vision model that
    needs 2 GB resident memory must not share a limit with a 200 MB API.
 3. **Agent runtime writes proposals, never actions.** Already in the contracts; it needs a queue and a
-   state machine to hold across retries (AGT-002, #16).
+   state machine to hold across retries (AGT-002, #17).
 
 ---
 
@@ -171,6 +171,6 @@ Recorded so the decision is not silently reversed later:
 |---|---|---|
 | Timescale hypertable strategy unvalidated at volume | Slow windows, storage growth | Benchmark in #2 with realistic rates |
 | Multi-tenancy in Qdrant (shared collection) | Cross-tenant retrieval leak | Per-tenant collection or mandatory filter; decide in #5 |
-| Agent retries duplicating recommendations | Duplicate maintenance work orders | Idempotency key per (investigation, agent, input hash); #16 |
-| Model version drift between registry and artifacts | A prediction cites a model that no longer exists | Pin artifact digest in `model_versions`; #17 |
+| Agent retries duplicating recommendations | Duplicate maintenance work orders | Idempotency key per (investigation, agent, input hash); #17 |
+| Model version drift between registry and artifacts | A prediction cites a model that no longer exists | Pin artifact digest in `model_versions`; #18 |
 | No offline story | A mill with intermittent internet loses inspection | Edge-compatible inference contract; #8 |

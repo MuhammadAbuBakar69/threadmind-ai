@@ -98,7 +98,7 @@ as a **non-superuser** role so RLS actually applies. CI job *Tenant isolation (r
 Assertions are on absence: zero rows, zero affected rows, `IntegrityError`.
 
 **Residual:** every new table needs a policy. The test enumerates tables explicitly, so a table added
-without a policy is only caught if the list is updated — a schema-driven assertion is tracked in #15.
+without a policy is only caught if the list is updated — a schema-driven assertion is tracked in #16.
 
 ---
 
@@ -109,7 +109,7 @@ configured. `/health` and `/health/ready` are exempt so an orchestrator can stil
 service.
 
 **Why acceptable now:** single-replica research deployment.
-**Required for production:** Redis-backed counters (`REDIS_URL` is already provisioned). Tracked in #15.
+**Required for production:** Redis-backed counters (`REDIS_URL` is already provisioned). Tracked in #16.
 
 ---
 
@@ -189,13 +189,13 @@ Present: multi-stage build, non-root user (uid 10001), no build tools in the run
 check, explicit `COPY` (no `ADD` of a tarball).
 
 Missing: read-only root filesystem, dropped capabilities, pinned base image digest, SBOM, image
-signing. Tracked in #18.
+signing. Tracked in #19.
 
 ---
 
 ### SEC-013 — Dependency and supply-chain scanning (P3, **Open**)
 
-No `pip-audit`, `npm audit`, Dependabot, or lockfile verification in CI. Tracked in #18.
+No `pip-audit`, `npm audit`, Dependabot, or lockfile verification in CI. Tracked in #19.
 
 ---
 

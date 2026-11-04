@@ -118,7 +118,7 @@ research validity · **P3** product/scale.
 | API-004 | No rate limiting | **Partial** (in-process; SEC-005) |
 | API-005 | Route handlers had no dependency-injected data access, making them untestable without a database | **Fixed** (repository protocol + overrides) |
 | DB-005 | No migration rollback path | **Fixed** (`900_rollback_002.sql`, applied in CI) |
-| DB-006 | Several tables lack `created_at`/`updated_at`, weakening audit trails | **Open** (#15) |
+| DB-006 | Several tables lack `created_at`/`updated_at`, weakening audit trails | **Open** (#16) |
 | DB-007 | `audit_logs` table exists; nothing writes to it | **Open** (#14) |
 
 ### P2 — Research validity
@@ -126,20 +126,20 @@ research validity · **P3** product/scale.
 | ID | Finding | Status |
 |---|---|---|
 | REAL-01 | No dataset manifest or versioning; a split cannot be re-derived | **Partial** (simulator `config_hash`) |
-| REAL-02 | No experiment runner, no result provenance record, no evaluation scripts | **Open** (#17) |
-| REAL-03 | Dataset licences recorded but not enforced anywhere in code | **Open** (#17) |
+| REAL-02 | No experiment runner, no result provenance record, no evaluation scripts | **Open** (#18) |
+| REAL-03 | Dataset licences recorded but not enforced anywhere in code | **Open** (#18) |
 | ML-001 | Zero models. Every metric in the BRD is an unvalidated target | **Open** (by design; #3, #4) |
 | AGT-001 | No agent has executed; latency, cost, and failure modes unmeasured | **Open** (#5) |
-| AGT-002 | No retry/idempotency design for agent actions; a retried run could duplicate recommendations | **Open** (#16) |
+| AGT-002 | No retry/idempotency design for agent actions; a retried run could duplicate recommendations | **Open** (#17) |
 
 ### P3 — Product
 
 | ID | Finding | Status |
 |---|---|---|
 | FE-001 | Dashboard is a static page; no auth, data, loading/empty/error states | **Open** (#6) |
-| DEV-001 | No dependency vulnerability scanning or SBOM | **Open** (#18) |
+| DEV-001 | No dependency vulnerability scanning or SBOM | **Open** (#19) |
 | DEV-002 | Compose stack has no resource limits and uses anonymous MQTT | **Documented** as dev-only (`docs/operations-runbook.md`) |
-| DEV-003 | No observability beyond logs; no metrics endpoint, no tracing | **Open** (#18) |
+| DEV-003 | No observability beyond logs; no metrics endpoint, no tracing | **Open** (#19) |
 
 ---
 

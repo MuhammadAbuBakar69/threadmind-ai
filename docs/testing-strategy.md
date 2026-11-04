@@ -97,11 +97,11 @@ The valuable tests are the ones where something is supposed to *not* happen:
 |---|---|---|
 | No coverage measurement in CI | Regressions in untouched modules | Add `--cov` with a floor once agents exist |
 | No MQTT consumer tests | The real ingestion path is untested | Consumer lands with the same contract; #2 |
-| No concurrency tests (parallel ingest) | Duplicate handling under load unproven | Add a threaded ingest test against Timescale; #15 |
+| No concurrency tests (parallel ingest) | Duplicate handling under load unproven | Add a threaded ingest test against Timescale; #16 |
 | No frontend tests | UI regressions silent | Playwright once #6 has real data |
-| No fuzzing on the telemetry contract | Unhandled shape crashes ingest | Hypothesis-based test; #17 |
+| No fuzzing on the telemetry contract | Unhandled shape crashes ingest | Hypothesis-based test; #18 |
 | No load test | P95 claims unvalidated | k6 against `/api/v1/telemetry`; #8 |
-| No mutation testing on contracts | Contract tests may be weaker than they look | Periodic `mutmut` run; #17 |
+| No mutation testing on contracts | Contract tests may be weaker than they look | Periodic `mutmut` run; #18 |
 
 None of these gaps weakens a claim above; they weaken claims the repository does **not** currently
 make. That distinction is the point of keeping this table honest.

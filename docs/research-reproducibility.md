@@ -51,7 +51,7 @@ Rules, all of which cost a minute now and a re-run later:
   model trained on it.
 
 **Status:** the schema above is specified; no manifest exists yet because no public dataset has been
-downloaded. This is honest debt, tracked in #2 and #17.
+downloaded. This is honest debt, tracked in #2 and #18.
 
 ---
 

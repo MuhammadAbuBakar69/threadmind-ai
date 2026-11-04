@@ -19,7 +19,7 @@ Legend: **Yes** · **Partial** · **No** · **Blocked** (external decision or ac
 | 6 | Agent contracts enforced | **Yes** | `tests/unit/test_contracts.py` |
 | 7 | Unsafe tools rejected | **Yes** | `assert_tool_allowed` raises on control tools |
 | 8 | Telemetry payloads validated | **Yes** | shared contract, both producers |
-| 9 | Failures and retries handled safely | **Partial** | ingest is idempotent; agent retries unbuilt (#16) |
+| 9 | Failures and retries handled safely | **Partial** | ingest is idempotent; agent retries unbuilt (#17) |
 | 10 | Logs and health checks operational | **Yes** | JSON logs, request id, `/health`, `/health/ready` |
 | 11 | Secrets handled securely | **Partial** | no secrets in repo, production refuses placeholder; no vault (SEC-002) |
 | 12 | CI passes | **Yes** | 6 jobs |
@@ -27,7 +27,7 @@ Legend: **Yes** · **Partial** · **No** · **Blocked** (external decision or ac
 | 14 | Known limitations recorded | **Yes** | audit §4, testing §5, this table |
 | 15 | Deployment and backup procedures documented | **Yes** | `docs/operations-runbook.md` |
 | 16 | Authentication is real, not mechanism-only | **Blocked** | needs an IdP decision (SEC-002) |
-| 17 | Audit trail written for privileged actions | **No** | #14/#15 |
+| 17 | Audit trail written for privileged actions | **No** | #14/#16 |
 | 18 | Rate limiting distributed across replicas | **No** | in-process only (SEC-005) |
 
 **Verdict: the foundation is verifiable, and not yet operational.** Criteria 1-15 hold; 16-18 do not,
@@ -39,13 +39,13 @@ and 16 is the gate — a platform with one shared signing secret cannot hold fac
 
 | # | Criterion | Status | Note |
 |---|---|---|---|
-| 19 | Metrics endpoint and dashboards | **No** | #18 |
-| 20 | Tracing across API → queue → worker | **No** | #18 |
-| 21 | Alerting on error rate, latency, queue depth | **No** | #18 |
+| 19 | Metrics endpoint and dashboards | **No** | #19 |
+| 20 | Tracing across API → queue → worker | **No** | #19 |
+| 21 | Alerting on error rate, latency, queue depth | **No** | #19 |
 | 22 | Backup schedule + a restore actually performed | **No** | procedure documented, rehearsal not done |
 | 23 | Load test at target telemetry rate | **No** | #8; P95 claims unvalidated |
-| 24 | Dependency vulnerability scanning | **No** | #18 |
-| 25 | SBOM and image signing | **No** | #18 |
+| 24 | Dependency vulnerability scanning | **No** | #19 |
+| 25 | SBOM and image signing | **No** | #19 |
 | 26 | Container runs as non-root | **Yes** | uid 10001 |
 | 27 | Migration executed as a controlled step, not at boot | **Yes** | documented in runbook |
 | 28 | Horizontal scale of inference workers | **Partial** | containers exist, queue does not |
