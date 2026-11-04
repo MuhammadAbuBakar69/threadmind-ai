@@ -1,0 +1,78 @@
+# ThreadMind AI — local development stack.
+# Not a production topology: credentials are deliberately trivial here and must never be reused.
+
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_USER: threadmind
+      POSTGRES_PASSWORD: threadmind
+      POSTGRES_DB: threadmind
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/schemas:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U threadmind -d threadmind"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: threadmind
+      MINIO_ROOT_PASSWORD: threadmind123
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [miniodata:/data]
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports: ["6333:6333"]
+    volumes: [qdrantdata:/qdrant/storage]
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports: ["1883:1883"]
+    volumes: ["./infrastructure/docker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro"]
+
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.api
+    environment:
+      DATABASE_URL: postgresql+psycopg://threadmind:threadmind@postgres:5432/threadmind
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT: http://minio:9000
+      QDRANT_URL: http://qdrant:6333
+      MQTT_BROKER_URL: mqtt://mosquitto:1883
+      APP_ENV: development
+    ports: ["8000:8000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  web:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+    ports: ["3000:3000"]
+    volumes: ["./apps/web:/app"]
+    depends_on: [api]
+
+volumes:
+  pgdata:
+  miniodata:
+  qdrantdata:

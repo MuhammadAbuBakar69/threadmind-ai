@@ -1,0 +1,34 @@
+# Baseline detector configuration — Experiment E1.
+# Every run records this file's hash alongside its metrics so results stay attributable.
+
+experiment: E1
+model: yolo11n
+data: data/processed/aitex-afid/data.yaml
+
+train:
+  epochs: 100
+  imgsz: 640
+  batch: 16
+  seed: 42
+  patience: 20
+  device: 0
+
+# Group-based split. NEVER random-split patches from the same source image.
+split:
+  strategy: group_by_fabric_roll
+  train: 0.7
+  val: 0.15
+  test: 0.15
+
+classes:
+  - hole
+  - stain
+  - broken_thread
+  - missing_yarn
+  - knot
+  - tear
+  - weaving_irregularity
+
+evaluation:
+  metrics: [precision, recall, f1, map50, map50_95, iou, latency_ms_p95, model_size_mb]
+  report_failure_cases: true
