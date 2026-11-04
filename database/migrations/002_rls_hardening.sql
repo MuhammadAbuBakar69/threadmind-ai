@@ -1,10 +1,10 @@
 -- ===========================================================================
 -- 002 — Row-level security hardening
 --
--- Two defects motivate this migration, both found by audit rather than by test:
+-- Three defects motivate this migration, all found by audit rather than by test:
 --
 -- 1. RLS was enabled on 16 tables but NOT forced. In PostgreSQL a table owner
---    bypasses its own RLS policies unless FORCE ROW LEVEL SECURITY is set. The
+--    bypasses its own policies unless FORCE ROW LEVEL SECURITY is set. The
 --    application connected as the schema owner, so in the deployed configuration
 --    the policies were decoration: every query saw every tenant's rows.
 --
@@ -14,11 +14,19 @@
 --    Child tables without organization_id must inherit isolation from their
 --    parent, and nothing enforced that.
 --
+-- 3. Policies compared against `current_setting('app.current_org', true)::uuid`
+--    with no empty-string guard. A custom GUC reverts to the empty string, not
+--    NULL, when a transaction-local setting ends, so the next statement on that
+--    pooled connection raises `invalid input syntax for type uuid: ""` instead of
+--    denying. Deny-by-default must return no rows, not an error. Hence NULLIF.
+--
 -- This migration is additive and reversible; see 900_rollback_002.sql.
 -- ===========================================================================
 
 -- ---------------------------------------------------------------------------
--- 1. Force RLS so it applies to the table owner as well.
+-- 1. Re-declare the tenant policy on every table that owns an organization_id.
+--    Uniform definition, empty-string safe, and supersedes the policies created
+--    by 001 so there is exactly one interpretation in the database.
 -- ---------------------------------------------------------------------------
 
 DO $$
@@ -28,9 +36,14 @@ BEGIN
     'factories','production_lines','machines','production_batches','production_events',
     'fabric_images','inspection_results','machine_sensors','sensor_readings','machine_predictions',
     'maintenance_records','maintenance_recommendations','investigations','agent_runs',
-    'system_alerts','audit_logs','detected_defects'
+    'system_alerts','audit_logs'
   ] LOOP
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);
+    EXECUTE format('DROP POLICY IF EXISTS tenant_isolation ON %I', t);
+    EXECUTE format(
+      $policy$CREATE POLICY tenant_isolation ON %I USING
+        (organization_id = NULLIF(current_setting('app.current_org', true), '')::uuid)$policy$, t);
   END LOOP;
 END $$;
 
@@ -44,36 +57,35 @@ ALTER TABLE organization_members FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS tenant_isolation ON organization_members;
 CREATE POLICY tenant_isolation ON organization_members
-    USING (organization_id = current_setting('app.current_org', true)::uuid);
+    USING (organization_id = NULLIF(current_setting('app.current_org', true), '')::uuid);
 
 -- A user must be able to resolve their own memberships before a principal
 -- exists, otherwise login is impossible. Read-only, self-scoped.
 DROP POLICY IF EXISTS self_membership_lookup ON organization_members;
 CREATE POLICY self_membership_lookup ON organization_members
     FOR SELECT
-    USING (user_id = current_setting('app.current_user', true)::uuid);
+    USING (user_id = NULLIF(current_setting('app.current_user', true), '')::uuid);
 
 -- ---------------------------------------------------------------------------
--- 3. Identity tables.
---    organizations and users are global, but a connection with the app role
---    must not be able to enumerate every tenant.
+-- 3. Identity tables. organizations and users are global, but a connection with
+--    the app role must not be able to enumerate every tenant.
 -- ---------------------------------------------------------------------------
 
 ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE organizations FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation ON organizations;
 CREATE POLICY tenant_isolation ON organizations
-    USING (id = current_setting('app.current_org', true)::uuid);
+    USING (id = NULLIF(current_setting('app.current_org', true), '')::uuid);
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation ON users;
 CREATE POLICY tenant_isolation ON users
     USING (
-        id = current_setting('app.current_user', true)::uuid
+        id = NULLIF(current_setting('app.current_user', true), '')::uuid
         OR id IN (
             SELECT m.user_id FROM organization_members m
-            WHERE m.organization_id = current_setting('app.current_org', true)::uuid
+            WHERE m.organization_id = NULLIF(current_setting('app.current_org', true), '')::uuid
         )
     );
 
@@ -83,6 +95,16 @@ CREATE POLICY tenant_isolation ON users
 --    to another organization is invisible regardless of how it is queried.
 -- ---------------------------------------------------------------------------
 
+ALTER TABLE detected_defects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE detected_defects FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation ON detected_defects;
+CREATE POLICY tenant_isolation ON detected_defects
+    USING (EXISTS (
+        SELECT 1 FROM inspection_results ir
+        WHERE ir.id = detected_defects.inspection_result_id
+          AND ir.organization_id = NULLIF(current_setting('app.current_org', true), '')::uuid
+    ));
+
 ALTER TABLE investigation_evidence ENABLE ROW LEVEL SECURITY;
 ALTER TABLE investigation_evidence FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation ON investigation_evidence;
@@ -90,7 +112,7 @@ CREATE POLICY tenant_isolation ON investigation_evidence
     USING (EXISTS (
         SELECT 1 FROM investigations i
         WHERE i.id = investigation_evidence.investigation_id
-          AND i.organization_id = current_setting('app.current_org', true)::uuid
+          AND i.organization_id = NULLIF(current_setting('app.current_org', true), '')::uuid
     ));
 
 ALTER TABLE root_cause_hypotheses ENABLE ROW LEVEL SECURITY;
@@ -100,7 +122,7 @@ CREATE POLICY tenant_isolation ON root_cause_hypotheses
     USING (EXISTS (
         SELECT 1 FROM investigations i
         WHERE i.id = root_cause_hypotheses.investigation_id
-          AND i.organization_id = current_setting('app.current_org', true)::uuid
+          AND i.organization_id = NULLIF(current_setting('app.current_org', true), '')::uuid
     ));
 
 ALTER TABLE agent_actions ENABLE ROW LEVEL SECURITY;
@@ -110,7 +132,7 @@ CREATE POLICY tenant_isolation ON agent_actions
     USING (EXISTS (
         SELECT 1 FROM agent_runs r
         WHERE r.id = agent_actions.agent_run_id
-          AND r.organization_id = current_setting('app.current_org', true)::uuid
+          AND r.organization_id = NULLIF(current_setting('app.current_org', true), '')::uuid
     ));
 
 -- ---------------------------------------------------------------------------

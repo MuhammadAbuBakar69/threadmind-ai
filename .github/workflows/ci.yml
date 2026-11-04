@@ -76,12 +76,26 @@ jobs:
             exit 1
           fi
       - name: Rollback migration is complete
+        # The rollback removes what 002 added. Policies created by 001 on the
+        # organization_id tables legitimately remain, so the check is scoped to the
+        # tables 002 introduced plus the forced-RLS flag, not to every policy by name.
         run: |
-          psql "postgresql://threadmind:threadmind@localhost:5432/threadmind" -v ON_ERROR_STOP=1 -f database/migrations/900_rollback_002.sql
-          remaining=$(psql -tA "postgresql://threadmind:threadmind@localhost:5432/threadmind" \
-            -c "SELECT count(*) FROM pg_policies WHERE policyname IN ('tenant_isolation','self_membership_lookup')")
-          echo "policies remaining after rollback: $remaining"
+          DB="postgresql://threadmind:threadmind@localhost:5432/threadmind"
+          psql "$DB" -v ON_ERROR_STOP=1 -f database/migrations/900_rollback_002.sql
+
+          remaining=$(psql -tA "$DB" -c "SELECT count(*) FROM pg_policies
+            WHERE schemaname='public'
+              AND tablename IN ('organization_members','organizations','users',
+                                'investigation_evidence','root_cause_hypotheses','agent_actions')
+              AND policyname IN ('tenant_isolation','self_membership_lookup')")
+          forced=$(psql -tA "$DB" -c "SELECT count(*) FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname='public' AND c.relkind='r' AND c.relforcerowsecurity")
+
+          echo "policies remaining on 002 tables: $remaining (want 0)"
+          echo "tables still forced: $forced (want 0)"
           test "$remaining" -eq 0
+          test "$forced" -eq 0
 
   isolation:
     name: Tenant isolation (real PostgreSQL)

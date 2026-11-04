@@ -89,9 +89,16 @@ audit, and each has a test now.
    `SET` does not accept bind parameters. Use
    `SELECT set_config('app.current_org', :org, true)` — the third argument makes it transaction-local,
    so a pooled connection never carries one tenant's scope into the next request.
-4. **Default deny.** With no scope set, `current_setting(..., true)` returns NULL and every policy
-   evaluates false. A query that forgets its `WHERE` clause returns zero rows. There is a test for
-   this (`test_unscoped_connection_sees_nothing`).
+4. **Default deny, and deny must not raise.** With no scope set, `current_setting(..., true)` returns
+   NULL and every policy evaluates false, so a query that forgets its `WHERE` clause returns zero
+   rows. There is a test for this (`test_unscoped_connection_sees_nothing`).
+
+   That test found a second-order bug worth recording: a custom GUC reverts to the **empty string**,
+   not NULL, when a transaction-local setting ends. On a pooled connection that had previously served
+   a scoped request, the policy then evaluated `''::uuid` and raised
+   `invalid input syntax for type uuid: ""` instead of denying. Every policy therefore uses
+   `NULLIF(current_setting('app.current_org', true), '')::uuid`. Deny-by-default has to return no
+   rows, not an error.
 
 ### Telemetry idempotency
 
