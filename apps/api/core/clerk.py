@@ -99,8 +99,9 @@ def clear_cache() -> None:
     _jwks_cache.clear()
 
 
-def verify_clerk_token(token: str, *, issuer: str, jwks: str | None = None,
-                       authorized_parties: tuple[str, ...] = ()) -> ClerkIdentity:
+def verify_clerk_token(
+    token: str, *, issuer: str, jwks: str | None = None, authorized_parties: tuple[str, ...] = ()
+) -> ClerkIdentity:
     try:
         header = jwt.get_unverified_header(token)
     except JWTError as exc:

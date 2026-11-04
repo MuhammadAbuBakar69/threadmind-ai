@@ -42,10 +42,14 @@ def rsa_keys():
         serialization.PrivateFormat.PKCS8,
         serialization.NoEncryption(),
     ).decode()
-    public_pem = key.public_key().public_bytes(
-        serialization.Encoding.PEM,
-        serialization.PublicFormat.SubjectPublicKeyInfo,
-    ).decode()
+    public_pem = (
+        key.public_key()
+        .public_bytes(
+            serialization.Encoding.PEM,
+            serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode()
+    )
     public_der = key.public_key().public_bytes(
         serialization.Encoding.DER,
         serialization.PublicFormat.SubjectPublicKeyInfo,
@@ -215,7 +219,9 @@ def test_a_garbage_token_is_rejected(rsa_keys):
 def test_jwks_url_is_derived_from_the_issuer():
     assert clerk.jwks_url(ISSUER) == f"{ISSUER}/.well-known/jwks.json"
     assert clerk.jwks_url(ISSUER + "/") == f"{ISSUER}/.well-known/jwks.json"
-    assert clerk.jwks_url(ISSUER, "https://keys.example/jwks.json") == "https://keys.example/jwks.json"
+    assert (
+        clerk.jwks_url(ISSUER, "https://keys.example/jwks.json") == "https://keys.example/jwks.json"
+    )
 
 
 # ---------------------------------------------------------------------------

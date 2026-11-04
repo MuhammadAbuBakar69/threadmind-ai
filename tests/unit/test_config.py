@@ -61,7 +61,9 @@ def test_clerk_requires_an_issuer():
 def test_clerk_issuer_must_be_https():
     """A plaintext issuer lets a network attacker publish their own key set."""
     with pytest.raises(ValidationError) as exc:
-        Settings(app_env="development", auth_provider="clerk", clerk_issuer="http://insecure.example")
+        Settings(
+            app_env="development", auth_provider="clerk", clerk_issuer="http://insecure.example"
+        )
     assert "https" in str(exc.value)
 
 
@@ -76,4 +78,6 @@ def test_authorized_parties_are_parsed_and_trimmed():
 
 def test_production_requires_a_secret_when_algorithm_changes():
     with pytest.raises(ValidationError):
-        Settings(app_env="production", jwt_secret="", jwt_algorithm="RS256", clerk_issuer=CLERK_ISSUER)
+        Settings(
+            app_env="production", jwt_secret="", jwt_algorithm="RS256", clerk_issuer=CLERK_ISSUER
+        )
