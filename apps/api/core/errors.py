@@ -27,8 +27,18 @@ class AppError(Exception):
     code: str = "bad_request"
     requirement: str | None = None
 
-    def __init__(self, message: str = "Request could not be completed.") -> None:
+    def __init__(
+        self,
+        message: str = "Request could not be completed.",
+        *,
+        requirement: str | None = None,
+    ) -> None:
         self.message = message
+        # The requirement can be narrowed per raise site: UnprocessableEntity is used by several
+        # modules (telemetry, inspections) and the SRS reference is more useful when it names the one
+        # that actually failed.
+        if requirement is not None:
+            self.requirement = requirement
         super().__init__(message)
 
 
@@ -64,6 +74,16 @@ class Conflict(AppError):
 class UnprocessableEntity(AppError):
     status_code = 422
     code = "invalid_payload"
+
+
+class PayloadTooLarge(AppError):
+    """Upload exceeded the configured limit.
+
+    413 rather than 400: the body was well formed, it was simply too big, and a client that retries
+    the same bytes should be told that rather than guess the schema is wrong.
+    """
+
+    status_code = 413
 
 
 class RateLimited(AppError):

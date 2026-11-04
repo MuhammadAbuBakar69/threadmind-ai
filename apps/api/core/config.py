@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     # Comma-separated origins allowed in the token's azp claim (the dashboard's own origin).
     clerk_authorized_parties: str = Field(default="")
 
+    # Where uploaded fabric images are written while there is no object store in the request path.
+    vision_upload_dir: str = Field(default="data/raw/inspections")
+    # Cameras produce large frames; 15 MB covers a 4000x4000 JPEG and refuses a zip bomb.
+    vision_max_upload_bytes: int = Field(default=15 * 1024 * 1024)
+
     vision_service_url: str = Field(default="http://localhost:8100")
     predictive_service_url: str = Field(default="http://localhost:8101")
 
