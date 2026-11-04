@@ -12,9 +12,10 @@ The question it is built to answer is not only *"what defect occurred?"* but:
 > what evidence supports the possible explanation, and what should the responsible engineer
 > investigate next?
 
-> **Status:** Foundation baseline v1.0. Scaffolding and requirements are in place; models and
-> services are under active development. Everything in `docs/` is a specification, not a claim
-> of achieved performance.
+> **Status:** audited foundation. The security and isolation layer is implemented and tested; models,
+> agents and the dashboard are not. Read [`docs/repository-audit.md`](docs/repository-audit.md) for
+> what is verified versus specified, and [`docs/production-readiness.md`](docs/production-readiness.md)
+> for the gap to operational use. Nothing in `docs/` is a claim of achieved model performance.
 
 ---
 
@@ -22,14 +23,17 @@ The question it is built to answer is not only *"what defect occurred?"* but:
 
 | Component | Path | State |
 |---|---|---|
-| Business + software requirements | `docs/` | Baseline v1.0 |
-| PostgreSQL schema | `database/schemas/001_initial.sql` | Implemented (DDL) |
-| FastAPI application layer | `apps/api` | Skeleton |
+| Requirements, audit and reviews | `docs/` | Baseline v1.0 + audit |
+| PostgreSQL schema | `database/schemas/001_initial.sql` | 24 tables, RLS enforced |
+| RLS hardening migration | `database/migrations/002_rls_hardening.sql` | Implemented + tested |
+| FastAPI application layer | `apps/api` | Auth, RBAC, errors, telemetry ingest |
+| Shared industrial contracts | `industrial/` | Telemetry validation |
+| Deterministic telemetry simulator | `ai-services/telemetry` | Implemented + tested |
 | Next.js dashboard | `apps/web` | Skeleton |
-| Fabric defect vision service | `ai-services/vision` | Planned |
-| Predictive maintenance service | `ai-services/predictive-maintenance` | Planned |
+| Fabric defect vision service | `ai-services/vision` | Planned (no model) |
+| Predictive maintenance service | `ai-services/predictive-maintenance` | Planned (no model) |
 | Root cause engine | `ai-services/root-cause` | Planned |
-| Five-agent orchestration | `agents` | Contracts + graph skeleton |
+| Five-agent orchestration | `agents` | Contracts enforced; execution not built |
 | Research harness | `research/` | Planned |
 
 ## The five agents

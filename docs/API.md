@@ -3,6 +3,51 @@
 Base path: `/api/v1`. All endpoints authenticate with a bearer token; every request resolves the
 caller's organization membership server-side.
 
+**Implemented today:** `/health`, `/health/ready`, `POST /api/v1/telemetry`. Everything else below is
+the target surface and is not routed yet — see `docs/issue-traceability.md`.
+
+## Conventions
+
+Every response carries `X-Request-ID`. Supply your own to correlate with your logs; an id that is not
+`[A-Za-z0-9._-]{8,64}` is replaced.
+
+Errors always use one envelope:
+
+```json
+{
+  "error": {
+    "code": "insufficient_role",
+    "message": "This action requires the factory_admin role.",
+    "requirement": "FR-002"
+  },
+  "request_id": "6b1f0e2c9a4d4f0e8c3b5a7d9e1f2a3b"
+}
+```
+
+Validation failures add `error.fields[]` with locations and reasons; submitted values are never
+echoed. Status codes in use: `401` unauthenticated, `403` insufficient role, `404` not found **or
+another tenant's record** (a 403 would confirm it exists), `409` conflict, `422` invalid payload,
+`429` rate limited, `500` internal (message only, no traceback).
+
+Rate limit: 120 requests / 60 s per caller, `Retry-After` on 429. Health endpoints are exempt.
+
+## Telemetry
+
+| Method | Path | Requirement |
+|---|---|---|
+| POST | `/telemetry` | FR-022, FR-023 |
+
+Accepts `{"readings": [...]}` (1-1000). Requires `production_supervisor` or above. `202` means
+validated and stored; downstream scoring is asynchronous.
+
+```json
+{"accepted": 998, "duplicates": 1, "rejected": [{"event_id": "…", "reason": "value: 950.0degC outside plausible range -40.0-400.0degC"}], "rejection_rate": 0.001}
+```
+
+A reading whose `organization_id` differs from the caller's is refused with `403` — tenant scope comes
+from the token, never the payload. Duplicates are counted, not stored twice: the natural key is
+`(machine_id, sensor_id, timestamp)`.
+
 ## Health
 
 | Method | Path | Purpose |
