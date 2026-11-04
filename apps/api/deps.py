@@ -9,7 +9,10 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 from core.auth import decode_token
+from core.clerk import verify_clerk_token
+from core.config import get_settings
 from core.errors import Forbidden, Unauthenticated
+from core.identity import resolve_principal as resolve_provider_principal
 from core.security import Principal, scope_session
 from db import get_sessionmaker
 from fastapi import Depends
@@ -24,7 +27,31 @@ def get_principal(
 ) -> Principal:
     if credentials is None or not credentials.credentials:
         raise Unauthenticated("A bearer token is required.")
-    return decode_token(credentials.credentials)
+
+    settings = get_settings()
+    if not settings.uses_clerk:
+        return decode_token(credentials.credentials)
+
+    identity = verify_clerk_token(
+        credentials.credentials,
+        issuer=settings.clerk_issuer,
+        jwks=settings.clerk_jwks_url or None,
+        authorized_parties=settings.authorized_parties,
+    )
+
+    # Identity resolution needs a session, and it needs one *before* any tenant scope exists:
+    # the scope is what we are trying to establish. The session is short-lived and intentionally
+    # unscoped - it only ever calls auth.resolve_identity(), which returns one row it was asked
+    # for by exact provider id.
+    session: Session = get_sessionmaker()()
+    try:
+        return resolve_provider_principal(
+            session,
+            provider_user_id=identity.provider_user_id,
+            provider_org_id=identity.provider_org_id,
+        )
+    finally:
+        session.close()
 
 
 def require_role(role: str):

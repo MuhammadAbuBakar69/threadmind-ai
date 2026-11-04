@@ -127,6 +127,11 @@ jobs:
   web:
     name: Dashboard builds
     runs-on: ubuntu-latest
+    env:
+      # A publishable key is public by design and only parsed at build time, so a syntactically
+      # valid placeholder keeps the build honest without putting a real Clerk instance in CI. The
+      # secret key is never part of this bundle.
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_dGhyZWFkbWluZC1jaS5jbGVyay5hY2NvdW50cy5kZXY
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

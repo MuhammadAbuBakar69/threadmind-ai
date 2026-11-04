@@ -51,19 +51,34 @@ Every endpoint was anonymous, and `organization_id` was whatever the client sent
 
 ---
 
-### SEC-002 — No identity provider; one shared secret authenticates everyone (P0, **Blocked**)
+### SEC-002 — No identity provider; one shared secret authenticates everyone (P0, **Fixed**)
 
-`core/auth.py` issues development tokens signed with `JWT_SECRET`. Every environment that shares that
-secret can mint a `super_admin` token for any organization.
+`core/auth.py` issued development tokens signed with `JWT_SECRET`. Every environment that shared that
+secret could mint a `super_admin` token for any organization.
 
-**Why it is blocked:** choosing an IdP is a product decision (Base44 auth, Clerk, Auth0, Keycloak),
-not an engineering shortcut to take unilaterally.
+**Resolution (2026-11-04).** Clerk is now the identity provider. Session tokens are RS256, signed by
+Clerk with a private key this service never holds, and verified against Clerk's published JWKS
+(`core/clerk.py`). The dev provider still exists for local work and CI, and a production deployment
+now **refuses to start** unless `AUTH_PROVIDER=clerk` — a strong secret does not fix a shared-secret
+design, so the refusal is on the provider, not on the secret's strength.
 
-**Interim controls:** `scripts/dev_token.py` is the only issuer; the token TTL defaults to 60 min;
-production refuses to start with the default secret (see SEC-003). Documented in
-`docs/operations-runbook.md`.
+Verified properties, each with a test:
 
-**Required before any real tenant data exists.**
+| Property | Test |
+|---|---|
+| `alg: none` is rejected | `test_an_unsecured_token_is_rejected` |
+| Algorithm confusion (HS256 signed with the public key) is rejected before any key fetch | `test_algorithm_confusion_is_rejected_before_any_key_lookup` |
+| Expired tokens rejected | `test_an_expired_token_is_rejected` |
+| Foreign issuer rejected | `test_a_token_from_another_issuer_is_rejected` |
+| Unknown `kid` costs exactly one refetch, so rotation works and forged `kid` cannot amplify fetches | `test_an_unknown_kid_triggers_exactly_one_refetch` |
+| `azp` must match an authorized origin when configured | `test_azp_must_match_an_authorized_party_when_configured` |
+| Role comes from `organization_members`, never from a token claim | `test_the_authoritative_role_comes_from_the_database_not_the_token` |
+| No membership or no selected org is a 403, not a silent default | `test_no_organization_selected_is_forbidden_not_unauthenticated` |
+
+**Residual risk (tracked in #20).** Clerk users and organizations must currently be linked to local
+rows by an operator script (`scripts/link_clerk_identity.py`). Until the Clerk webhook handler
+provisions them automatically, a new Clerk signup authenticates successfully and is then refused by
+the membership check — the safe direction to fail, but it is manual onboarding, not self-service.
 
 ---
 

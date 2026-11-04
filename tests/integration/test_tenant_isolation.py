@@ -38,6 +38,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_FILES = [
     ROOT / "database" / "schemas" / "001_initial.sql",
     ROOT / "database" / "migrations" / "002_rls_hardening.sql",
+    ROOT / "database" / "migrations" / "003_clerk_identity.sql",
 ]
 
 APP_ROLE = "threadmind_app"
@@ -54,6 +55,13 @@ MACHINE_B = uuid.UUID("bbbbbbbb-0000-4000-8000-000000000042")
 INVESTIGATION_A = uuid.UUID("aaaaaaaa-0000-4000-8000-000000000051")
 INVESTIGATION_B = uuid.UUID("bbbbbbbb-0000-4000-8000-000000000052")
 SENSOR_A = uuid.UUID("aaaaaaaa-0000-4000-8000-000000000061")
+
+# Provider identifiers, deliberately not UUIDs: Clerk ids look like "user_2abc...", and the
+# database must not depend on them being parseable as anything.
+CLERK_ORG_A = "org_2clerkFactoryA"
+CLERK_ORG_B = "org_2clerkFactoryB"
+CLERK_USER_A = "user_2clerkInspectorA"
+CLERK_USER_B = "user_2clerkManagerB"
 
 TENANT_TABLES = [
     "factories",
@@ -102,6 +110,12 @@ def admin_engine():
         conn.exec_driver_sql(
             f"GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO {APP_ROLE}"
         )
+        # 003 grants these to the app role only if it already exists; here the role is created
+        # after the migrations run, so the grants are applied explicitly.
+        conn.exec_driver_sql(f"GRANT USAGE ON SCHEMA auth TO {APP_ROLE}")
+        conn.exec_driver_sql(
+            f"GRANT EXECUTE ON FUNCTION auth.resolve_identity(TEXT, TEXT) TO {APP_ROLE}"
+        )
 
         _seed(conn)
 
@@ -111,14 +125,18 @@ def admin_engine():
 
 def _seed(conn) -> None:
     conn.execute(
-        text("INSERT INTO organizations (id, name) VALUES (:a, 'Factory A'), (:b, 'Factory B')"),
-        {"a": ORG_A, "b": ORG_B},
+        text(
+            "INSERT INTO organizations (id, name, clerk_org_id) VALUES "
+            "(:a, 'Factory A', :clerk_a), (:b, 'Factory B', :clerk_b)"
+        ),
+        {"a": ORG_A, "b": ORG_B, "clerk_a": CLERK_ORG_A, "clerk_b": CLERK_ORG_B},
     )
     conn.execute(
         text(
-            "INSERT INTO users (id, email, full_name) VALUES (:a, 'a@example.com', 'A'), (:b, 'b@example.com', 'B')"
+            "INSERT INTO users (id, email, full_name, authentication_provider_id) VALUES "
+            "(:a, 'a@example.com', 'A', :clerk_a), (:b, 'b@example.com', 'B', :clerk_b)"
         ),
-        {"a": USER_A, "b": USER_B},
+        {"a": USER_A, "b": USER_B, "clerk_a": CLERK_USER_A, "clerk_b": CLERK_USER_B},
     )
     conn.execute(
         text(
@@ -324,3 +342,94 @@ def test_duplicate_sensor_reading_is_rejected_by_the_natural_key(app_engine):
         conn.rollback()
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Identity resolution — the one sanctioned bypass of RLS.
+#
+# RLS is forced on users, organizations and organization_members, so a connection with no scope set
+# cannot read the rows needed to establish a scope. auth.resolve_identity() is that bypass, and
+# these tests hold it to the narrow contract that makes it acceptable: one row, asked for by exact
+# provider id, and no reachable path to it from PUBLIC.
+# ---------------------------------------------------------------------------
+
+
+def test_provider_identity_resolves_to_the_local_tenant_and_role(app_engine):
+    with app_engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT user_id, organization_id, role FROM auth.resolve_identity(:u, :o)"),
+            {"u": CLERK_USER_A, "o": CLERK_ORG_A},
+        ).first()
+
+    assert row is not None
+    assert str(row[0]) == str(USER_A)
+    assert str(row[1]) == str(ORG_A)
+    assert row[2] == "factory_admin"
+
+
+def test_provider_identity_cannot_be_combined_with_another_organization(app_engine):
+    """The dangerous case: a genuine user id paired with a tenant they do not belong to."""
+    with app_engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT user_id FROM auth.resolve_identity(:u, :o)"),
+            {"u": CLERK_USER_A, "o": CLERK_ORG_B},
+        ).first()
+
+    assert row is None
+
+
+def test_an_unknown_provider_identity_resolves_to_nothing(app_engine):
+    with app_engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT user_id FROM auth.resolve_identity(:u, :o)"),
+            {"u": "user_does_not_exist", "o": CLERK_ORG_A},
+        ).first()
+
+    assert row is None
+
+
+def test_the_resolver_is_the_only_reachable_path_to_identity_rows(app_engine):
+    """Without the resolver, an unscoped connection sees no users and no organizations at all."""
+    with app_engine.connect() as conn:
+        users = conn.execute(text("SELECT count(*) FROM users")).scalar_one()
+        orgs = conn.execute(text("SELECT count(*) FROM organizations")).scalar_one()
+
+    assert (users, orgs) == (0, 0)
+
+
+def test_the_resolver_is_security_definer_with_a_pinned_search_path(admin_engine):
+    """A SECURITY DEFINER function without a pinned search_path is a privilege-escalation hole:
+    a caller can create a shadowing table earlier in the path."""
+    with admin_engine.connect() as conn:
+        row = conn.execute(
+            text(
+                """
+                SELECT p.prosecdef, p.proconfig
+                FROM pg_proc p
+                JOIN pg_namespace n ON n.oid = p.pronamespace
+                WHERE n.nspname = 'auth' AND p.proname = 'resolve_identity'
+                """
+            )
+        ).first()
+
+    assert row is not None, "auth.resolve_identity is missing"
+    assert row[0] is True, "function must be SECURITY DEFINER"
+    assert row[1] is not None and any(c.startswith("search_path=") for c in row[1])
+
+
+def test_the_resolver_is_not_executable_by_public(admin_engine):
+    with admin_engine.connect() as conn:
+        public_grants = conn.execute(
+            text(
+                """
+                SELECT count(*)
+                FROM pg_proc p
+                JOIN pg_namespace n ON n.oid = p.pronamespace,
+                     aclexplode(p.proacl) acl
+                WHERE n.nspname = 'auth' AND p.proname = 'resolve_identity'
+                  AND acl.grantee = 0
+                """
+            )
+        ).scalar_one()
+
+    assert public_grants == 0, "PUBLIC must not hold EXECUTE on the resolver"
