@@ -25,3 +25,4 @@ class ReadinessResponse(BaseModel):
     status: Literal["ready", "degraded"]
     database: bool
     detail: str | None = None
+    environment: str | None = None

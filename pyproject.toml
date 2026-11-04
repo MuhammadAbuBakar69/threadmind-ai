@@ -9,7 +9,7 @@ ignore = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = [".", "apps/api"]
+pythonpath = [".", "apps/api", "ai-services/telemetry"]
 addopts = "-q"
 
 [tool.ruff.lint.per-file-ignores]
