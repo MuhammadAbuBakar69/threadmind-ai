@@ -52,8 +52,12 @@ jobs:
       - name: Apply schema
         run: psql "postgresql://threadmind:threadmind@localhost:5432/threadmind" -v ON_ERROR_STOP=1 -f database/schemas/001_initial.sql
       - name: Apply migrations
+        # Forward migrations are 0NN_*.sql; rollbacks are 9NN_rollback_*.sql and must NEVER be
+        # applied here. The first version of this loop used [0-9]*, which applied the rollback
+        # immediately after the migration and silently undid it - the RLS assertion below then
+        # failed with 0 forced tables, which is exactly what a correct assertion should do.
         run: |
-          for f in database/migrations/[0-9]*.sql; do
+          for f in database/migrations/0*.sql; do
             echo "applying $f"
             psql "postgresql://threadmind:threadmind@localhost:5432/threadmind" -v ON_ERROR_STOP=1 -f "$f"
           done
@@ -63,7 +67,14 @@ jobs:
                  WHERE n.nspname='public' AND c.relkind='r' AND c.relrowsecurity AND c.relforcerowsecurity"
           forced=$(psql -tA "postgresql://threadmind:threadmind@localhost:5432/threadmind" -c "$query")
           echo "tables with RLS enabled and forced: $forced"
-          test "$forced" -ge 18
+          if [ "$forced" -lt 18 ]; then
+            echo "::error::only $forced tables have RLS forced; expected >= 18"
+            psql -tA "postgresql://threadmind:threadmind@localhost:5432/threadmind" -c \
+              "SELECT relname, relrowsecurity, relforcerowsecurity FROM pg_class c
+               JOIN pg_namespace n ON n.oid = c.relnamespace
+               WHERE n.nspname='public' AND c.relkind='r' ORDER BY relname"
+            exit 1
+          fi
       - name: Rollback migration is complete
         run: |
           psql "postgresql://threadmind:threadmind@localhost:5432/threadmind" -v ON_ERROR_STOP=1 -f database/migrations/900_rollback_002.sql

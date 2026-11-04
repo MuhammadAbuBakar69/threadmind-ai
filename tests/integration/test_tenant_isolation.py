@@ -80,13 +80,22 @@ TENANT_TABLES = [
 @pytest.fixture(scope="session")
 def admin_engine():
     engine = create_engine(DATABASE_URL, isolation_level="AUTOCOMMIT", future=True)
-    with engine.connect() as conn:
-        for path in SCHEMA_FILES:
-            # exec_driver_sql, not text(): these are DDL files containing casts like `::uuid` and
-            # multi-statement bodies. Letting SQLAlchemy parse them for bind parameters is how a
-            # migration applies differently in tests than in production.
-            conn.exec_driver_sql(path.read_text())
 
+    # The migration files contain `format('%I %I ...')` inside DO blocks. psycopg treats `%` as the
+    # start of a placeholder whenever it is given parameters, so every SQLAlchemy path (text() and
+    # exec_driver_sql alike) fails on them with "only '%s', '%b', '%t' are allowed as placeholders".
+    # A raw cursor with no parameters uses the simple query protocol, where `%` is a literal and
+    # multiple statements are allowed - which is how psql applies them in production.
+    raw = engine.raw_connection()
+    try:
+        cursor = raw.cursor()
+        for path in SCHEMA_FILES:
+            cursor.execute(path.read_text())
+        raw.commit()
+    finally:
+        raw.close()
+
+    with engine.connect() as conn:
         conn.exec_driver_sql(f"DROP ROLE IF EXISTS {APP_ROLE}")
         conn.exec_driver_sql(f"CREATE ROLE {APP_ROLE} LOGIN PASSWORD '{APP_PASSWORD}'")
         conn.exec_driver_sql(f"GRANT USAGE ON SCHEMA public TO {APP_ROLE}")
