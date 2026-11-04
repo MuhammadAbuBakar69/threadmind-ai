@@ -20,11 +20,20 @@ DROP POLICY IF EXISTS tenant_isolation ON organizations;
 DROP POLICY IF EXISTS tenant_isolation ON organization_members;
 DROP POLICY IF EXISTS self_membership_lookup ON organization_members;
 
+-- NO FORCE must precede DISABLE: disabling RLS does not clear the FORCE flag, so a table left
+-- behind by DISABLE alone keeps relforcerowsecurity = true and re-enabling RLS later would silently
+-- re-force it. The order is observed behaviour, not preference - the CI rollback check caught it.
+ALTER TABLE investigation_evidence NO FORCE ROW LEVEL SECURITY;
 ALTER TABLE investigation_evidence DISABLE ROW LEVEL SECURITY;
+ALTER TABLE root_cause_hypotheses NO FORCE ROW LEVEL SECURITY;
 ALTER TABLE root_cause_hypotheses DISABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_actions NO FORCE ROW LEVEL SECURITY;
 ALTER TABLE agent_actions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE users NO FORCE ROW LEVEL SECURITY;
 ALTER TABLE users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE organizations NO FORCE ROW LEVEL SECURITY;
 ALTER TABLE organizations DISABLE ROW LEVEL SECURITY;
+ALTER TABLE organization_members NO FORCE ROW LEVEL SECURITY;
 ALTER TABLE organization_members DISABLE ROW LEVEL SECURITY;
 
 DO $$

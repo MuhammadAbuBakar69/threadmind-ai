@@ -100,6 +100,13 @@ audit, and each has a test now.
    `NULLIF(current_setting('app.current_org', true), '')::uuid`. Deny-by-default has to return no
    rows, not an error.
 
+### FORCE survives DISABLE
+
+`ALTER TABLE ... DISABLE ROW LEVEL SECURITY` does not clear the FORCE flag. A rollback that only
+disables leaves `relforcerowsecurity = true`, so the next `ENABLE` silently re-forces RLS on a table
+nobody intended to force. Rollbacks must issue `NO FORCE` first; `900_rollback_002.sql` does, and the
+CI rollback check asserts that zero tables remain forced afterwards.
+
 ### Telemetry idempotency
 
 MQTT QoS 1 is at-least-once. `uq_readings_natural_key` on `(machine_id, sensor_id, "timestamp")` lets
