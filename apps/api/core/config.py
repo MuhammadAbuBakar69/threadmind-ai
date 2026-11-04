@@ -1,13 +1,19 @@
 """Application configuration.
 
-Every value that differs between environments comes from the environment. There are no
-hardcoded credentials, URLs, or tenant identifiers anywhere in this package.
+Every value that differs between environments comes from the environment. There are no hardcoded
+credentials, URLs, or tenant identifiers anywhere in this package.
+
+One refusal lives here on purpose: production will not start with the placeholder JWT secret from
+`.env.example`. A default that is safe only because nobody deployed it is not safe, and this exact
+mistake is one of the most common causes of a forgeable token in a small deployment (SEC-003).
 """
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+PLACEHOLDER_SECRET = "change-me-in-production"
 
 
 class Settings(BaseSettings):
@@ -22,7 +28,7 @@ class Settings(BaseSettings):
     )
     redis_url: str = Field(default="redis://localhost:6379/0")
 
-    jwt_secret: str = Field(default="change-me-in-production")
+    jwt_secret: str = Field(default=PLACEHOLDER_SECRET)
     jwt_algorithm: str = Field(default="HS256")
     access_token_ttl_minutes: int = Field(default=60)
 
@@ -32,6 +38,17 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"
+
+    @model_validator(mode="after")
+    def refuse_unsafe_production_defaults(self) -> "Settings":
+        if self.is_production and self.jwt_secret == PLACEHOLDER_SECRET:
+            raise ValueError(
+                "JWT_SECRET must be set to a real secret in production: a shared placeholder "
+                "secret lets anyone mint a token for any organization (SEC-003)."
+            )
+        if self.jwt_algorithm != "HS256" and not self.jwt_secret:
+            raise ValueError("JWT_SECRET is required for the configured algorithm")
+        return self
 
 
 @lru_cache
