@@ -56,7 +56,9 @@ class AgentRequest(BaseModel):
 class EvidenceRef(BaseModel):
     """A citation. `source_record_id` points at a real row; there is no free-text-only evidence."""
 
-    evidence_type: Literal["sensor_window", "inspection", "maintenance", "batch", "document", "prediction"]
+    evidence_type: Literal[
+        "sensor_window", "inspection", "maintenance", "batch", "document", "prediction"
+    ]
     source_record_id: UUID
     description: str = Field(max_length=1000)
     relevance_score: float = Field(ge=0.0, le=1.0)
@@ -74,7 +76,10 @@ class Finding(BaseModel):
     @model_validator(mode="after")
     def non_hypothesis_needs_evidence(self) -> Finding:
         """Facts and associations are citations. A hypothesis may stand alone, clearly labelled."""
-        if self.claim_kind in (ClaimKind.OBSERVED_FACT, ClaimKind.ASSOCIATION) and not self.evidence:
+        if (
+            self.claim_kind in (ClaimKind.OBSERVED_FACT, ClaimKind.ASSOCIATION)
+            and not self.evidence
+        ):
             raise ValueError(
                 "observed facts and associations require at least one evidence reference (FR-034)"
             )
@@ -115,8 +120,19 @@ class AgentOutput(BaseModel):
 
 AGENT_PERMITTED_TOOLS: dict[AgentName, tuple[str, ...]] = {
     AgentName.QUALITY: ("vision.inspect", "quality.read_history", "quality.write_result"),
-    AgentName.MAINTENANCE: ("sensors.read_window", "model.anomaly", "model.failure_risk", "maintenance.read"),
-    AgentName.ROOT_CAUSE: ("quality.read", "sensors.read_window", "maintenance.read", "docs.retrieve", "stats.correlate"),
+    AgentName.MAINTENANCE: (
+        "sensors.read_window",
+        "model.anomaly",
+        "model.failure_risk",
+        "maintenance.read",
+    ),
+    AgentName.ROOT_CAUSE: (
+        "quality.read",
+        "sensors.read_window",
+        "maintenance.read",
+        "docs.retrieve",
+        "stats.correlate",
+    ),
     AgentName.PRODUCTION: ("production.read", "analytics.oee", "forecast.run"),
     AgentName.ORCHESTRATOR: ("agents.delegate", "evidence.validate"),
 }

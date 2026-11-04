@@ -30,4 +30,6 @@ async def run(request: AgentRequest) -> AgentOutput:
     7. Retrieve relevant technical documentation for the top candidates.
     8. Emit the report with supporting *and* contradictory evidence, then request engineer review.
     """
-    raise NotImplementedError("Phase 5 (weeks 15-18): implement the correlation and ranking core first")
+    raise NotImplementedError(
+        "Phase 5 (weeks 15-18): implement the correlation and ranking core first"
+    )

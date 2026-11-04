@@ -7,7 +7,7 @@ classes itself: the class and confidence come from the recorded model version.
 
 from __future__ import annotations
 
-from agents.contracts import AgentName, AgentOutput, AgentRequest, RunStatus
+from agents.contracts import AgentName, AgentOutput, AgentRequest
 
 NAME = AgentName.QUALITY
 

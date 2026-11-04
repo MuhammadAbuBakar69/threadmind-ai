@@ -4,10 +4,9 @@ Layer 2 of the architecture: authentication integration, business logic, validat
 and service communication. Long-running AI work must be enqueued, never awaited inline.
 """
 
+from core.config import get_settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from core.config import get_settings
 from middleware.tenant import TenantContextMiddleware
 from routes import health
 

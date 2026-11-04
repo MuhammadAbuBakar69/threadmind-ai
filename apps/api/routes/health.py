@@ -4,12 +4,11 @@ Readiness deliberately reports a degraded state instead of raising, so an orches
 the routing decision rather than receiving an ambiguous 500.
 """
 
+from db import get_db
 from fastapi import APIRouter, Depends
+from schemas.common import HealthResponse, ReadinessResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-
-from db import get_db
-from schemas.common import HealthResponse, ReadinessResponse
 
 router = APIRouter(tags=["health"])
 

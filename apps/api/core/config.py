@@ -17,7 +17,9 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO")
     api_base_url: str = Field(default="http://localhost:8000")
 
-    database_url: str = Field(default="postgresql+psycopg://threadmind:threadmind@localhost:5432/threadmind")
+    database_url: str = Field(
+        default="postgresql+psycopg://threadmind:threadmind@localhost:5432/threadmind"
+    )
     redis_url: str = Field(default="redis://localhost:6379/0")
 
     jwt_secret: str = Field(default="change-me-in-production")

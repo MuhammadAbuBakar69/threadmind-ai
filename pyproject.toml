@@ -11,3 +11,8 @@ ignore = ["E501"]
 testpaths = ["tests"]
 pythonpath = [".", "apps/api"]
 addopts = "-q"
+
+[tool.ruff.lint.per-file-ignores]
+# FastAPI's dependency-injection idiom is a call in a default argument (Depends(...)). That is the
+# framework's documented pattern, not a bug.
+"apps/api/**" = ["B008"]

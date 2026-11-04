@@ -1,7 +1,6 @@
 """Liveness must not depend on the database; readiness must."""
 
 from fastapi.testclient import TestClient
-
 from main import app
 
 

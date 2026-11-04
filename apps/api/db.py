@@ -8,10 +8,9 @@ module, and none of them should fall over because Postgres is not running.
 from collections.abc import Iterator
 from functools import lru_cache
 
+from core.config import get_settings
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
-
-from core.config import get_settings
 
 
 @lru_cache

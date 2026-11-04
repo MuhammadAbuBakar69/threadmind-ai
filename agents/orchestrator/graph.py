@@ -29,11 +29,11 @@ class OrchestratorState(TypedDict, total=False):
 
 
 VALIDATION_STEPS = (
-    "schema",            # contract shape
-    "tenant_scope",      # every evidence ref resolves inside the org
-    "model_version",     # numeric claims trace to a recorded artifact
-    "timestamps",        # evidence precedes or brackets the event
-    "claim_kinds",       # no association dressed as fact
+    "schema",  # contract shape
+    "tenant_scope",  # every evidence ref resolves inside the org
+    "model_version",  # numeric claims trace to a recorded artifact
+    "timestamps",  # evidence precedes or brackets the event
+    "claim_kinds",  # no association dressed as fact
 )
 
 

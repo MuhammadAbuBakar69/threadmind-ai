@@ -74,6 +74,37 @@ psql "$DATABASE_URL" -f database/schemas/001_initial.sql
 
 Python 3.11+, Node 20+, Docker 24+.
 
+## Roadmap
+
+The schedule is a proposed research plan, not a guarantee. Real factory integration and
+research-quality evaluation may take longer.
+
+| Phase | Focus | Issue |
+|---|---|---|
+| 1 | Research and requirements | [#1](../../issues/1) |
+| 2 | Data engineering | [#2](../../issues/2) |
+| 3 | Fabric defect vision service | [#3](../../issues/3) |
+| 4 | Predictive maintenance models | [#4](../../issues/4) |
+| 5 | Root cause engine and five-agent system | [#5](../../issues/5) |
+| 6 | Enterprise dashboard | [#6](../../issues/6) |
+| 7 | Integration, testing, security | [#7](../../issues/7) |
+| 8 | Cloud deployment and evaluation | [#8](../../issues/8) |
+
+Experiments: [E1](../../issues/9) defect detection · [E2](../../issues/10) machine anomaly ·
+[E3](../../issues/11) root cause comparison · [E4](../../issues/12) production analytics ·
+[E5](../../issues/13) integrated system. Cross-tenant security proof: [#14](../../issues/14).
+
+## Running the tests
+
+```bash
+pip install -r apps/api/requirements.txt
+pytest -q     # 11 contract and health tests today
+ruff check . && ruff format --check agents apps/api tests
+```
+
+The contract tests are the interesting ones: they assert that an "observed fact" cannot exist
+without an evidence reference, and that no agent can ever hold a machine-control tool.
+
 ## Documentation
 
 - [`docs/BRD.md`](docs/BRD.md) — business requirements
