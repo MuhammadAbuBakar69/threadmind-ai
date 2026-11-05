@@ -99,3 +99,7 @@ that data arrives.
 | Every call returns 403 | The Clerk account is not linked to a tenant yet. Run `link_clerk_identity.py`. |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not set` at build | The dashboard refuses to build without it, rather than shipping a broken login. |
 | 413 on upload | `VISION_MAX_UPLOAD_BYTES` (default 15 MB). |
+
+## Put it online
+
+See [docs/deployment-live.md](docs/deployment-live.md) for Render, a single VPS with Docker, or the GHCR image.

@@ -1,0 +1,64 @@
+# Single-server production topology: TLS, API, database, on one VPS.
+#
+# This is a real deployment target, not a development convenience: Caddy terminates TLS with
+# automatic certificates, the database is not published to the host, and the API runs the migrator
+# before it serves traffic. It is still one machine — there is no redundancy, so read
+# docs/operations-runbook.md before trusting it with a factory's only copy of anything.
+#
+# Usage:
+#   DOMAIN=threadmind.example.com CLERK_ISSUER=... CLERK_SECRET_KEY=... docker compose -f docker-compose.prod.yml up -d
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN}
+    volumes:
+      - ./infrastructure/docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on: [api]
+
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.api
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      AUTH_PROVIDER: clerk
+      CLERK_ISSUER: ${CLERK_ISSUER:?set CLERK_ISSUER}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?set CLERK_SECRET_KEY}
+      CLERK_AUTHORIZED_PARTIES: ${DOMAIN}
+      DATABASE_URL: postgresql+psycopg://threadmind:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/threadmind
+      RUN_MIGRATIONS: "1"
+      VISION_UPLOAD_DIR: /tmp/inspections
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: threadmind
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: threadmind
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U threadmind -d threadmind"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
+  caddydata:
+  caddyconfig:
