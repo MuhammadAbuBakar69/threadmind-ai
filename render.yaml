@@ -1,0 +1,57 @@
+# Render blueprint — one-click deploy of the API, database and dashboard.
+#
+# Why Render and not "whatever is cheapest": this file only works if the host supports three things
+# the project actually depends on — a managed PostgreSQL with pgcrypto/citext, a long-running
+# container (not a serverless function, because MQTT sessions and the migration lock need a stable
+# process), and a health check path. Providers without those would need the app changed to fit them.
+#
+# Secrets are `sync: false`: Render prompts for them on first deploy and never stores them in git.
+
+databases:
+  - name: threadmind-db
+    plan: basic-256mb
+    postgresMajorVersion: "16"
+    ipAllowList: []
+
+services:
+  - type: web
+    name: threadmind-api
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    dockerfilePath: ./infrastructure/docker/Dockerfile.api
+    dockerContext: .
+    healthCheckPath: /health/ready
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: AUTH_PROVIDER
+        value: clerk
+      - key: DATABASE_URL
+        fromDatabase:
+          name: threadmind-db
+          property: connectionString
+      - key: RUN_MIGRATIONS
+        value: "1"
+      - key: VISION_UPLOAD_DIR
+        value: /tmp/inspections
+      - key: CLERK_ISSUER
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: CLERK_AUTHORIZED_PARTIES
+        sync: false
+
+  - type: web
+    name: threadmind-dashboard
+    runtime: node
+    plan: starter
+    region: frankfurt
+    rootDir: apps/web
+    buildCommand: npm ci || npm install
+    startCommand: npm start
+    envVars:
+      - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: NEXT_PUBLIC_API_BASE_URL
+        sync: false

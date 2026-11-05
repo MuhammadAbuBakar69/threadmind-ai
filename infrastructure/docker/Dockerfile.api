@@ -18,6 +18,10 @@ COPY apps/api /app
 # Shared contracts used by both the API and the telemetry simulator. Copied explicitly rather than
 # widened into a catch-all so the image cannot quietly grow to include tests or research data.
 COPY industrial /app/industrial
+# Migrations ship with the image so a deploy does not need a psql client or a host-specific
+# pre-deploy hook. See apps/api/migrate.py.
+COPY database /app/database
+COPY infrastructure/docker/entrypoint.sh /app/entrypoint.sh
 
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/app
 USER threadmind
@@ -26,4 +30,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# RUN_MIGRATIONS=1 applies the schema and forward migrations once at start; unset it when migrations
+# are run deliberately from a release job instead.
+CMD ["sh", "/app/entrypoint.sh"]
